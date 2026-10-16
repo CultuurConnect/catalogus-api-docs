@@ -38326,11 +38326,6 @@ paths:
             
         - `groups` = de eventuele groepen waar deze vestiging toe behoort. Een
         vestiging kan geen groep hebben, één of meerdere.
-tags:
-  - name: openbare bibliotheken
-    description: Tag description
-  - name: Cultuurconnect
-    description: Tag description
 components:
   securitySchemes:
     ApiKeyAuth:
