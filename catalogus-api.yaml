@@ -32887,7 +32887,7 @@ paths:
 
         Het ophalen van descriptors is bedoeld als hulpmiddel tijdens
         development. In productie gebruik je die parameter best niet.
-  /api/search/products/facets/pd.subjects:
+  /api/search/products/facets/{source}.{facetName}:
     get:
       summary: Zoeken binnen een filter / Facet field search
       parameters:
@@ -35277,7 +35277,7 @@ paths:
         Let op, binnen die exemplaarinformatie is de availability_status near
         real time. Hier kan max. 5 minuten vertraging op zitten t.o.v. de live
         status (daarvoor is een apart endpoint beschikbaar).
-  /api/search/wise-availability/hits/8136644322917041589:
+  /api/search/wise-availability/hits/{productId}:
     get:
       summary: Live beschikbaarheid ophalen voor een titel
       parameters:
