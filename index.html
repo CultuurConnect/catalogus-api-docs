@@ -4,10 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Catalogus API</title>
-  <style>body { margin: 0; padding: 0; }</style>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css">
 </head>
 <body>
-  <redoc spec-url="catalogus-api.yaml"></redoc>
-  <script src="https://cdn.jsdelivr.net/npm/redoc@2.1.5/bundles/redoc.standalone.js"></script>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({ url: "catalogus-api.yaml", dom_id: "#swagger-ui" });
+  </script>
 </body>
 </html>

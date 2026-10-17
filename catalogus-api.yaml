@@ -3,20 +3,18 @@ info:
   title: Catalogus API - Publieke Documentatie (WIP)
   version: 1.0.0
   description: >-
-    **Dit is de publieke documentatie voor de api van de bibliotheekcatalogus
-    van de Vlaamse en Brusselse nederlandstalige openbare biblotheken.**
+    Dit is de publieke documentatie voor de api van de bibliotheekcatalogus
+    van de Vlaamse en Brusselse nederlandstalige openbare biblotheken.
 
 
-    ### Autenticatie
-
+    ## Autenticatie
 
     Authenticatie verloopt via een `x-api-key` header met daarin een api-key.
     Informatie over hoe een api key verkregen kan worden en onder welke
     voorwaarden volgt later.
 
 
-    ### Basisconcepten
-
+    ## Basisconcepten
 
     We voorzien bij elke call uitleg over de parameters die gebruikt kunnen
     worden en enkele voorbeeld calls en responses. Lees dus ook de documentatie
@@ -88,7 +86,7 @@ info:
     Deze kunnen achterhaald worden via het bibliotheeklocaties endpoint.
 
 
-    ### Migreren van Aquabrowser api
+    ## Migreren van Aquabrowser api
 
 
     Voor ontwikkelaars die vroeger de aquabrowser api gebruikten lichten we een
@@ -126,8 +124,12 @@ info:
 
     Gebruik op /products-with-instances ook altijd een locatiefilter (zie
     voorbeelden) op bibliotheek, vestiging of groep.
+    
+    #### **Belangrijkste nieuwe features**
+    
+    Nieuw is dat je nu ook kunt filteren op de beschikbaarheid (uitleenstatus) van items. Dit staat toegelicht bij het /products endpint (zoeken in de catalogus).
 servers:
-  - url: '{{baseUrl}}'
+  - url: 'https://catalogus-api.bibliotheek.be'
 security:
   - ApiKeyAuth: []
 paths:
@@ -139,7 +141,13 @@ paths:
           in: query
           schema:
             type: string
-          example: bibliotheek
+          examples:
+            zoekterm:
+              summary: Zoekterm
+              value: bibliotheek
+            potter:
+              summary: potter
+              value: potter
         - name: sort
           in: query
           description: >-
@@ -158,16 +166,56 @@ paths:
         - name: include
           in: query
           description: >-
-            Voegt alle filterrubrieken inclusief de top filter values toe aan de
-            respons.
+            Voeg facets (filters) of veldinformatie toe aan de respons.
           schema:
             type: string
-          example: facets
+          examples:
+            voegt-alle-filterrubrieken-inclusief-de-top-filter:
+              summary: Voegt alle filterrubrieken inclusief de top filter values toe aan de respons.
+              value: facets
+            voegt-enerzijds-veld-informatie-toe-die-gebruikt-k:
+              summary: "Voegt enerzijds veld-informatie toe die gebruikt kan worden voor het bouwen van een filter en geeft ook de opties terug die bij andere parameters zoals sorteren gebruikt kunnen worden.\n\nDeze parameter heb je in productie normaalgezien niet nodig, voeg die dan niet toe aan je calls."
+              value: descriptors
         - name: f
           in: query
+          description: Filter; mag meerdere keren meegegeven worden (elke waarde wordt een aparte `f=` in de URL). Meerdere filters worden gecombineerd (AND).
           schema:
-            type: string
-          example: '{filter}'
+            type: array
+            items:
+              type: string
+          examples:
+            bibliotheek:
+              summary: Filter op producten in een bibliotheek (instantiecode I319)
+              value:
+                - pd.available_in_library.eq.I319
+            vestiging:
+              summary: Filter op producten in een specifieke vestiging (3190)
+              value:
+                - pd.available_in.eq.3190
+            meerdere-vestigingen:
+              summary: Filter op producten in meerdere vestigingen (OR)
+              value:
+                - pd.available_in.eq-any.3190.3191
+            groep:
+              summary: Filter op producten in een groep bibliotheeklocaties
+              value:
+                - pd.available_in_group.eq.Meetjesland
+            beschikbaar-in-bibliotheek:
+              summary: Filter op beschikbaarheid in een bibliotheek (uitleenbare items)
+              value:
+                - pd.loanable_in_library.eq.I319
+            beschikbaar-in-vestiging:
+              summary: Filter op beschikbaarheid in een specifieke vestiging
+              value:
+                - pd.loanable_in.eq.3190
+            meerdere-filters:
+              summary: 'Meerdere filters combineren: boeken of tijdschriften, uitgegeven 2020-2026, non-fictie'
+              value:
+                - pd.material_type.eq-any.boek.tijdschrift
+                - pd.publication_years.bt.2020.2026
+                - pd.literary_type.eq.non-fictie
+          style: form
+          explode: true
         - name: page
           in: query
           description: Voor het pagineren door resultaten
@@ -32956,10 +33004,44 @@ paths:
           example: descriptors
         - name: f
           in: query
-          description: Filter op één of meerdere bibliotheken. Verplicht mee te geven.
+          description: Filter; mag meerdere keren meegegeven worden. Een filter op bibliotheek, vestiging of groep is verplicht. Combineer die met een filter op één id om een specifieke titel op te halen (zie voorbeelden).
           schema:
-            type: string
-          example: ins.library_id.eq-any.I300
+            type: array
+            items:
+              type: string
+          examples:
+            product-id:
+              summary: Bibliotheekfilter + product-id
+              value:
+                - ins.library_id.eq-any.I300
+                - pd.id.eq.8136644322917041589
+            vlacc-manifestatie:
+              summary: Bibliotheekfilter + Vlacc manifestatie-code
+              value:
+                - ins.library_id.eq-any.I300
+                - keys-manifestations.code.eq.M-7NSWC7G2NB
+            vlacc-id:
+              summary: Bibliotheekfilter + Vlacc ID
+              value:
+                - ins.library_id.eq-any.I300
+                - keys.vlacc_numbers.eq-any.10083255
+            vlacc-werk:
+              summary: Bibliotheekfilter + Vlacc werk-code
+              value:
+                - ins.library_id.eq-any.I300
+                - keys-work.code.eq.W-H67VCQ995J
+            wise-titelnummer:
+              summary: Bibliotheekfilter + Wise titelnummer
+              value:
+                - ins.library_id.eq-any.I300
+                - keys-manifestations.code.eq.5064174
+            barcode:
+              summary: Bibliotheekfilter + exemplaar barcode
+              value:
+                - ins.library_id.eq-any.I300
+                - ins.barcode.eq-any.30001000101979
+          style: form
+          explode: true
       responses:
         '200':
           description: Voorbeeld productid + voor 1 bibliotheek
@@ -35206,7 +35288,16 @@ paths:
             het product over alle vestigingen.
           schema:
             type: string
-          example: ins.branch_id.eq.3010
+          examples:
+            filter-op-een-vestiging-zonder-filter-krijg-je-all:
+              summary: Filter op één vestiging. Zonder filter krijg je alle exemplaren van het product over alle vestigingen.
+              value: ins.branch_id.eq.3010
+            filter-op-een-bibliotheek:
+              summary: Filter op één bibliotheek
+              value: ins.library_id.eq.I310
+            filter-op-een-groep-van-bibliotheekvestigingen:
+              summary: Filter op een groep van bibliotheekvestigingen
+              value: ins.groups.eq.Meetjesland
       responses:
         '200':
           description: Live beschikbaarheid ophalen voor een titel
@@ -35511,9 +35602,7 @@ paths:
           in: query
           description: >-
             Vrije-tekst zoekopdracht — wordt gelijktijdig doorgestuurd naar alle
-            deeltemplates (products, suggest-subjects, suggest-author-name,
-            suggest-material-type, suggest-title, suggest-series-titles,
-            branches, reviews).
+            deeltemplates (products, subjects, author-names, series-titles).
           schema:
             type: string
           example: mars
@@ -35521,7 +35610,16 @@ paths:
           in: query
           schema:
             type: string
-          example: pd.available_in_library.eq.I320
+          examples:
+            pd-available-in-library-eq-i320:
+              summary: pd.available_in_library.eq.I320
+              value: pd.available_in_library.eq.I320
+            pd-available-in-eq-3200:
+              summary: pd.available_in.eq.3200
+              value: pd.available_in.eq.3200
+            pd-available-in-group-eq-meetjesland:
+              summary: pd.available_in_group.eq.Meetjesland
+              value: pd.available_in_group.eq.Meetjesland
       responses:
         '200':
           description: Zoeken via autocomplete
