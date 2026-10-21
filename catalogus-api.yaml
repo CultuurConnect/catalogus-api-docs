@@ -4,13 +4,13 @@ info:
   version: 1.0.0
   description: >-
     Dit is de publieke documentatie voor de api van de bibliotheekcatalogus
-    van de Vlaamse en Brusselse nederlandstalige openbare biblotheken.
+    van de Vlaamse en Brusselse Nederlandstalige openbare biblotheken.
 
 
     ## Autenticatie
 
     Authenticatie verloopt via een `x-api-key` header met daarin een api-key.
-    Informatie over hoe een api key verkregen kan worden en onder welke
+    Informatie over hoe een api-key verkregen kan worden en onder welke
     voorwaarden volgt later.
 
 
@@ -28,11 +28,11 @@ info:
     - `instances` zijn de effectieve exemplaren van een titel die in bezit zijn
     bij een bibliotheek.
         
-    - filters volgen het patroon `{bron}.{facetname}.operator.{value}`
+    - filters geef je mee met de `f=` parameter en volgen het patroon `{bron}.{facetname}.operator.{value}`
         
-        - bron = `pd` (product), `ins` (instance) of `key` (een id zoals isbn of vlacc nummer)
+        - bron = `pd` (product), `ins` (instance), `br` (branch/biblocatie) of `key` (een id zoals isbn of vlacc nummer)
             
-        - facetname > gebruik eerst `?include=facets` om een oplijsting te verkrijgen. Een voorbeeld is 'author_names'
+        - facetname > gebruik eerst `?include=facets` om een oplijsting te verkrijgen. Een voorbeeld is 'main_author'
             
         - operator opties:
             
@@ -62,6 +62,8 @@ info:
                 
             - Strings die uit meerdere woorden bestaan geef je tussen `()` door (bv. een auteursnaam).
                 
+        - Neem je alles samen dan krijg je dus bv. een filter als `f=pd.main_author.eq.(Hugo Claus)`
+            
     - Om de informatie van 1 titel terug te krijgen doe je een filteractie op
     één van de mogelijke keys/id's die een product kan hebben, dit kan op
     /products of /products-with-instances:
@@ -98,7 +100,8 @@ info:
 
 
     - Product = gefrablde titel in aquabrowser (zie ‘group_key’ in api respons
-    voor logica achter groepering)
+    voor logica achter groepering). Een product-id is dus het equivalent van
+    vroeger het frabl-id.
         
     - Instance = item / exemplaar
         
@@ -127,7 +130,7 @@ info:
     
     #### **Belangrijkste nieuwe features**
     
-    Nieuw is dat je nu ook kunt filteren op de beschikbaarheid (uitleenstatus) van items. Dit staat toegelicht bij het /products endpint (zoeken in de catalogus).
+    Nieuw is dat je nu ook kunt filteren op de beschikbaarheid (uitleenstatus) van items. Dit staat toegelicht bij het /products endpoint (zoeken in de catalogus).
 servers:
   - url: 'https://catalogus-api.bibliotheek.be'
 security:
@@ -178,7 +181,7 @@ paths:
               value: descriptors
         - name: f
           in: query
-          description: Filter; mag meerdere keren meegegeven worden (elke waarde wordt een aparte `f=` in de URL). Meerdere filters worden gecombineerd (AND).
+          description: Kan herhaald worden. Zie inleiding voor toelichting bij werking.
           schema:
             type: array
             items:
@@ -208,6 +211,10 @@ paths:
               summary: Filter op beschikbaarheid in een specifieke vestiging
               value:
                 - pd.loanable_in.eq.3190
+            beschikbaar-in-groep:
+              summary: Filter op beschikbaarheid in een groep vestigingen
+              value:
+                - pd.loanable_in_group.eq.Meetjesland
             meerdere-filters:
               summary: 'Meerdere filters combineren: boeken of tijdschriften, uitgegeven 2020-2026, non-fictie'
               value:
@@ -228,6 +235,16 @@ paths:
           schema:
             type: integer
           example: 0
+        - name: locale
+          in: query
+          description: Standaard nl. Indien je fr of en wilt dan mee te geven
+          schema:
+            type: string
+            enum:
+              - nl
+              - fr
+              - en
+          example: fr
       responses:
         '200':
           description: Basis zoekopdracht
@@ -32873,16 +32890,13 @@ paths:
         zoekresultaten te beperken tot een specifieke bibliotheek.
 
 
-        De verschillende bijgevoegde voorbeeldcalls illustreren een aantal
-        courante acties. Ze tonen wel niet alle mogelijkheden zoals bv. alle
-        filteropties.
-
-
-        Kijk om te beginnen naar de bijgevoegde voorbeelden met include
-        descriptors en include facets. De return-velden onder `descriptor` geven
-        meer info over bepaalde acties zoals sorteren en over alle velden die er
-        zijn. De 'field' waarden zoals bv. `pd.author_names` is wat je dan nodig
-        hebt als startpunt voor een filter.
+        De verschillende bijgevoegde voorbeeld-parameters en voorbeeld-reponses
+        illustreren een aantal courante acties, maar zijn niet exhaustief. Kijk
+        om te beginnen naar de bijgevoegde voorbeelden met include descriptors en
+        include facets. De return-velden onder `descriptor` geven meer info over
+        bepaalde acties zoals sorteren en over alle velden die er zijn. De
+        'field' waarden zoals bv. `pd.main_author` is wat je dan nodig hebt als
+        startpunt voor een filter.
 
 
         Het ophalen van descriptors is bedoeld als hulpmiddel tijdens
@@ -32891,6 +32905,20 @@ paths:
     get:
       summary: Zoeken binnen een filter / Facet field search
       parameters:
+        - name: source
+          in: path
+          required: true
+          description: Bron van het facet, bv. `pd` (product).
+          schema:
+            type: string
+          example: pd
+        - name: facetName
+          in: path
+          required: true
+          description: Naam van het facet dat je wilt doorzoeken, bv. `subjects`. Gebruik `?include=facets` op /products voor een oplijsting.
+          schema:
+            type: string
+          example: subjects
         - name: q
           in: query
           schema:
@@ -35277,10 +35305,44 @@ paths:
         Let op, binnen die exemplaarinformatie is de availability_status near
         real time. Hier kan max. 5 minuten vertraging op zitten t.o.v. de live
         status (daarvoor is een apart endpoint beschikbaar).
+  /api/search/products-with-instances/hits/{productId}:
+    get:
+      summary: Detailinformatie voor een titel ophalen - variant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product-id, zoals je die terugkrijgt van /products.
+          schema:
+            type: string
+          example: '8136644322917041589'
+        - name: f
+          in: query
+          description: Filter op één of meerdere bibliotheken, vestigingen of een groep. Verplicht mee te geven. Kan herhaald worden.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example:
+            - ins.library_id.eq-any.I300
+      responses:
+        '200':
+          description: Zelfde respons als /products-with-instances met een filter op product-id.
+      description: |
+        In het pad `/hits/{productId}` gebruiken is een alternatief voor de filter op productId. Dit is gewoon een rewrite, het resultaat blijft hetzelfde.
   /api/search/wise-availability/hits/{productId}:
     get:
       summary: Live beschikbaarheid ophalen voor een titel
       parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Product-id, zoals je die terugkrijgt van /products.
+          schema:
+            type: string
+          example: '8136644322917041589'
         - name: pre_filter
           in: query
           description: >-
@@ -38424,6 +38486,182 @@ paths:
             
         - `groups` = de eventuele groepen waar deze vestiging toe behoort. Een
         vestiging kan geen groep hebben, één of meerdere.
+  /api/search/reviews:
+    get:
+      summary: Recensies voor een product ophalen
+      parameters:
+        - name: f
+          in: query
+          description: Filter reviews op product-id. Eén review/product-paar per document — een review die meerdere producten matcht resulteert in meerdere documenten.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example:
+            - rv.product_id.eq-any.4981075481026646189
+        - name: sort
+          in: query
+          description: Nieuwste reviews eerst (default sortering uit het template).
+          schema:
+            type: string
+          example: rv.review_updated_utc.desc
+        - name: page_size
+          in: query
+          description: 'Toegestane waarden: 10, 25, 50.'
+          schema:
+            type: integer
+            enum:
+              - 10
+              - 25
+              - 50
+          example: 10
+      responses:
+        '200':
+          description: Recensies voor een product ophalen
+          content:
+            application/json:
+              examples:
+                recensies-voor-een-product:
+                  summary: Recensies voor een product ophalen
+                  description: 'Request: `GET /api/search/reviews?f=rv.product_id.eq-any.4981075481026646189&sort=rv.review_updated_utc.desc`'
+                  value:
+                    template: reviews
+                    parameters:
+                      f:
+                        - rv.product_id.eq-any.4981075481026646189
+                      sort:
+                        - rv.review_updated_utc.desc
+                      page: 1
+                      page_size: 10
+                      locale: nl
+                      include:
+                      require_related:
+                    total_count: 3
+                    filters:
+                      - field: rv.product_id
+                        filter_type: eq-any
+                        value:
+                          value: '4981075481026646189'
+                    results:
+                      - data:
+                          audit:
+                            lineage:
+                              - source: nbdbiblion
+                              - source: derived
+                          expression_ids:
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                          id: review/nbdbiblion/9789045045283:7105ff85
+                          identifiers_used:
+                            - isbn/9789045045283
+                          language: Nederlands
+                          product_id:
+                            - '4735737929946981162'
+                            - '4981075481026646189'
+                          product_ids:
+                            - '{"code":"M-IDUJ98FH99","source":"OpenVlacc"}'
+                            - '{"code":"3471669","source":"Wise"}'
+                          publication: NbdBiblion
+                          publication_week: 202202
+                          reviewer: Mirjam Scholten
+                          source: nbdbiblion
+                          text: In de jaren negentig geeft de auteur als werkstudente studiebegeleiding aan de kinderen van een orthodox­joods gezin in de Antwerpse wijk waar de mensen pijpenkrullen, keppeltjes, zwarte pruiken en kousen dragen. Na een stroeve kennismaking met de ouders weet ze zich toch een plek te verwerven in het gezin, in weerwil van de verschillen met háár wereld qua leefregels, omgangsvormen en ideeën. Als haar taak erop zit, blijft het contact. Jaren later bezoekt ze de kinderen in Israël en de Verenigde Staten. Bij het optekenen van haar ervaringen gaat de schrijfster dieper in op het jodendom, de orthodoxie, maar ook haar gevoelens van afkeer en afweer soms. Tegenover begrip vanwege de Holocaust voelt zij onbehaaglijk onbegrip vanwege de Palestijnse kwestie. Tegelijk is ze eerlijk over de jaloezie die ze ervaart omdat joden een kosmopolitische gemeenschap vormen waar zij nooit bij kan horen. In feite draait alles om de vraag hoe wij in al onze diversiteit toch kunnen samenleven. Een goed te volgen boek over hedendaagse vraagstukken rond integratie en segregatie. Persoonlijk en interessant, zeker voor wie zich in het jodendom wil verdiepen. E. du Perronprijs 2017.
+                          work_id: work/openvlacc/w-87205e35z8
+                      - data:
+                          audit:
+                            lineage:
+                              - source: nbdbiblion
+                              - source: derived
+                          expression_ids:
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                          id: review/nbdbiblion/9789045033853:6a454bc1
+                          identifiers_used:
+                            - isbn/9789045033853
+                          language: Nederlands
+                          product_id:
+                            - '4735737929946981162'
+                            - '4981075481026646189'
+                          product_ids:
+                            - '{"code":"M-2S9UQ9PH16","source":"OpenVlacc"}'
+                            - '{"code":"M-BN0ISADN87","source":"OpenVlacc"}'
+                            - '{"code":"M-C12VO81H89","source":"OpenVlacc"}'
+                            - '{"code":"M-C1V59PUK72","source":"OpenVlacc"}'
+                            - '{"code":"M-F45L4VUWF1","source":"OpenVlacc"}'
+                            - '{"code":"M-K62H24BNXU","source":"OpenVlacc"}'
+                            - '{"code":"1236713","source":"Wise"}'
+                            - '{"code":"1316936","source":"Wise"}'
+                            - '{"code":"1583724","source":"Wise"}'
+                            - '{"code":"3182946","source":"Wise"}'
+                            - '{"code":"4118473","source":"Wise"}'
+                            - '{"code":"4941005","source":"Wise"}'
+                          publication: NbdBiblion
+                          publication_week: 201722
+                          reviewer: Mirjam Scholten
+                          source: nbdbiblion
+                          text: In de jaren negentig geeft de auteur als werkstudente studiebegeleiding aan de kinderen van een orthodox­joods gezin in de Antwerpse wijk waar de mensen pijpenkrullen, keppeltjes, zwarte pruiken en kousen dragen. Na een stroeve kennismaking met de ouders weet ze zich toch een  plek te verwerven in het gezin, in weerwil van de verschillen met háár wereld qua leefregels, omgangsvormen en ideeën. Als haar taak erop zit, blijft het contact. Jaren later bezoekt ze de kinderen in Israël en de Verenigde Staten. Bij het optekenen van haar ervaringen gaat de schrijfster dieper in op het jodendom, de orthodoxie, maar ook haar gevoelens van afkeer en afweer soms. Tegenover begrip vanwege de Holocaust voelt zij onbehaaglijk onbegrip vanwege de Palestijnse kwestie. Tegelijk is ze eerlijk over de jaloezie die ze ervaart omdat joden een kosmopolitische gemeenschap vormen waar zij nooit bij kan horen. In feite draait alles om de vraag hoe wij in al onze diversiteit toch kunnen samenleven. Een goed te volgen boek over hedendaagse vraagstukken rond integratie en segregatie. Persoonlijk en interessant, zeker voor wie zich in het jodendom wil verdiepen. E. du Perronprijs 2017.
+                          work_id: work/openvlacc/w-87205e35z8
+                      - data:
+                          audit:
+                            lineage:
+                              - source: openvlacc
+                              - source: derived
+                            updated_utc: '2017-04-21T00:00:00'
+                          expression_ids:
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                            - '{"code":"E-66Z11WSCHY","source":"OpenVlacc"}'
+                          id: review/openvlacc/9789045033853:05f75b5f
+                          identifiers_used:
+                            - isbn/9789045033853
+                          language: Nederlands
+                          product_id:
+                            - '4735737929946981162'
+                            - '4981075481026646189'
+                          product_ids:
+                            - '{"code":"M-2S9UQ9PH16","source":"OpenVlacc"}'
+                            - '{"code":"M-BN0ISADN87","source":"OpenVlacc"}'
+                            - '{"code":"M-C12VO81H89","source":"OpenVlacc"}'
+                            - '{"code":"M-C1V59PUK72","source":"OpenVlacc"}'
+                            - '{"code":"M-F45L4VUWF1","source":"OpenVlacc"}'
+                            - '{"code":"M-K62H24BNXU","source":"OpenVlacc"}'
+                            - '{"code":"1236713","source":"Wise"}'
+                            - '{"code":"1316936","source":"Wise"}'
+                            - '{"code":"1583724","source":"Wise"}'
+                            - '{"code":"3182946","source":"Wise"}'
+                            - '{"code":"4118473","source":"Wise"}'
+                            - '{"code":"4941005","source":"Wise"}'
+                          publication: De Standaard
+                          publication_week: 201716
+                          review_updated_utc: '2017-04-21T00:00:00'
+                          reviewer: Filip Rogiers
+                          source: openvlacc
+                          text: "<p><strong></strong></p><p><strong></strong></p><p>De ondertitel vloekt ook met een sleutelzin in het boek: 'In dit huis had ik niet gewerkt. Ik had er met een nieuwe familie tijd, leven, doorgebracht.' En wat de auteur daar vooral leerde, inderdaad, was dat je ook en vooral mensen niet moet beoordelen op de eerste, zichtbare laag.</p><p>Ook daarom is Mazzel tov meer literatuur dan journalistiek: het boek stelt meer vragen dan antwoorden. Pertinente vragen, zoals: 'Waar hielden respect en voorzichtigheid op en gingen ze over in taboe?' Kunnen we elkaar ooit echt kennen? Kunnen we samenleven? Hoe praten we over onszelf en elkaar? Wat is nou die hele identiteit?</p><p>Met een pen als een fileermesje maakt ze het besef dat 'diversiteit, net als liefde, een werkwoord is' op elke pagina aanschouwelijk zonder ergens belerend te worden. Dit boek is een must read voor iedereen, want multicultureel is vandaag élke omgeving. Ook verplichte lectuur daarom voor Zuhal Demir en de haren. Niet minder voor Abou Dyab Jahjah en de zijnen bij wie de lijn tussen antizionisme en antisemitisme wel degelijk soms flinterdun wordt.</p><p>Vanderstraeten presteert wat elke schrijver groot maakt: tonen hoe mooi en moeilijk het is om mens te zijn onder de mensen. Mazzel tov is een heel straf boek.</p><p>Atlas Contact, 336 blz., 19,99 €</p>"
+                          title: Lezen, Zuhal en Dyab!
+                          work_id: work/openvlacc/w-87205e35z8
+      description: |
+        Haalt recensies op voor een specifiek product.
+
+        Dit endpoint is enkel beschikbaar via de 'rijke api', mits een goedgekeurde gebruikersovereenkomst.
+
+        Relevante velden in `data`:
+
+        - `id` — bv. `review/nbdbiblion/9789045045283:7105ff85`
+        - `source` — herkomst (bv. OpenVlacc, NbdBiblion)
+        - `title` / `reviewer` / `text` — de review zelf
+        - `rating` — score (indien beschikbaar)
+        - `language` — taal van het besproken werk
+        - `review_updated_utc` — laatste wijziging (basis voor sortering)
+        - `product_id` — id van het product waaraan deze review gekoppeld is (één review/product-paar per document — een review die meerdere producten matcht resulteert in meerdere documenten in de index)
+        - `identifiers_used` — welke ISBN-link de match opleverde
 components:
   securitySchemes:
     ApiKeyAuth:
