@@ -7,7 +7,7 @@ info:
     van de Vlaamse en Brusselse Nederlandstalige openbare biblotheken.
 
 
-    ## Autenticatie
+    ## Authenticatie
 
     Authenticatie verloopt via een `x-api-key` header met daarin een api-key.
     Informatie over hoe een api-key verkregen kan worden en onder welke
